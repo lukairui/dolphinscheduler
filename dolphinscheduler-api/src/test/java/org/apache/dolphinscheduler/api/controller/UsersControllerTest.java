@@ -31,6 +31,7 @@ import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -41,6 +42,7 @@ import org.springframework.util.MultiValueMap;
 /**
  * users controller test
  */
+@PowerMockIgnore("javax.net.ssl.*")
 public class UsersControllerTest extends AbstractControllerTest {
 
     private static Logger logger = LoggerFactory.getLogger(UsersControllerTest.class);
