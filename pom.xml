@@ -31,7 +31,7 @@
     <description>Dolphin Scheduler is a distributed and easy-to-expand visual DAG workflow scheduling system, dedicated
         to solving the complex dependencies in data processing, making the scheduling system out of the box for data
         processing.</description>
-
+<test>dev-branch-edit1</test>
     <modules>
         <module>dolphinscheduler-bom</module>
         <module>dolphinscheduler-alert</module>
