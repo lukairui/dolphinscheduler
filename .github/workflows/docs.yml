@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Style Check
         run: ./mvnw spotless:check
   img-check:
@@ -40,7 +40,7 @@ jobs:
       run:
         working-directory: docs
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
@@ -54,24 +54,45 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v2
-      - run: sudo npm install -g markdown-link-check@3.11.2
-      - run: sudo apt install plocate -y
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Collect Workflow Telemetry
+        uses: ./.github/actions/workflow-telemetry-action
+        with:
+          comment_on_pr: false
+      - run: sudo npm install -g markdown-link-check@3.13.7
+      - run: sudo apt install plocate -y && sudo updatedb
       # NOTE: Change command from `find . -name "*.md"` to `find . -not -path "*/node_modules/*" -not -path "*/.tox/*" -name "*.md"`
       # if you want to run check locally
-      - run: |
-          for file in $(locate "$PWD*/*.md" | grep -v ./deploy/terraform/aws/README.md); do
+      - name: Check Dead Links
+        run: |
+          set -xe
+          MAX_CONCURRENCY=6
+          EXIT_CODE=0
+  
+          cleanup() {
+            pkill -P $$
+            exit "$EXIT_CODE"
+          }
+          
+          trap cleanup SIGINT SIGTERM
+          
+          for file in $(locate "$PWD*/*.md" | grep -v ./deploy/terraform/aws/README.md | grep -v ./.github); do
+            while [ $(jobs -r | wc -l) -ge "$MAX_CONCURRENCY" ]; do
+              wait -n || { EXIT_CODE=$?; cleanup; }
+            done
             markdown-link-check -c .dlc.json -q "$file" &
           done
-          wait
+          wait || { EXIT_CODE=$?; cleanup; }
   paths-filter:
     name: Helm-Doc-Path-Filter
     runs-on: ubuntu-latest
     outputs:
       helm-doc: ${{ steps.filter.outputs.helm-doc }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@b2feaf19c27470162a626bd6fa8438ae5b263721
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3.0.2
         id: filter
         with:
           filters: |
@@ -84,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Generating helm-doc

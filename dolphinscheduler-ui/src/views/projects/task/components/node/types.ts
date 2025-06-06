@@ -350,6 +350,17 @@ interface ITaskParams {
   password?: string
   zeppelinProductionNoteDirectory?: string
   productionNoteDirectory?: string
+  regionId?: string
+  accessKeyId?: string
+  accessKeySecret?: string
+  workspaceId?: string
+  resourceQueueId?: string
+  codeType?: string
+  engineReleaseVersion?: string
+  entryPoint?: string
+  entryPointArguments?: string
+  sparkSubmitParameters?: string
+  isProduction?: boolean
   hiveCliOptions?: string
   hiveSqlScript?: string
   hiveCliTaskExecutionType?: string
@@ -365,12 +376,11 @@ interface ITaskParams {
   startupScript?: string
   executionTimeout?: string
   startTimeout?: string
-  processDefinitionCode?: number
+  workflowDefinitionCode?: number
   conditionResult?: {
     successNode?: number[]
     failedNode?: number[]
   }
-  udfs?: string
   connParams?: string
   targetJobName?: string
   cluster?: string
@@ -423,7 +433,7 @@ interface ITaskParams {
   scriptParams?: string
   pythonPath?: string
   isCreateEnvironment?: string
-  pythonCommand?: string
+  pythonLauncher?: string
   pythonEnvTool?: string
   requirements?: string
   condaPythonVersion?: string
@@ -466,7 +476,6 @@ interface INodeData
       | 'dependence'
       | 'sparkParameters'
       | 'conditionResult'
-      | 'udfs'
       | 'customConfig'
     >,
     ISqoopTargetData,
@@ -475,7 +484,7 @@ interface INodeData
     Omit<IRuleParameters, 'mapping_columns'> {
   id?: string
   taskType?: ITaskType
-  processName?: number
+  workflowDefinitionName?: number
   delayTime?: number
   description?: string
   environmentCode?: number | null
@@ -484,7 +493,6 @@ interface INodeData
   cpuQuota?: number
   memoryMax?: number
   flag?: 'YES' | 'NO'
-  isCache?: boolean
   taskGroupId?: number
   taskGroupPriority?: number
   taskPriority?: string
@@ -507,7 +515,6 @@ interface INodeData
   definition?: object
   successBranch?: number
   failedBranch?: number
-  udfs?: string[]
   customConfig?: boolean
   mapping_columns?: object[]
   taskExecuteType?: TaskExecuteType
@@ -516,11 +523,10 @@ interface INodeData
 interface ITaskData
   extends Omit<
     INodeData,
-    'isCache' | 'timeoutFlag' | 'taskPriority' | 'timeoutNotifyStrategy'
+    'timeoutFlag' | 'taskPriority' | 'timeoutNotifyStrategy'
   > {
   name?: string
   taskPriority?: string
-  isCache?: 'YES' | 'NO'
   timeoutFlag?: 'OPEN' | 'CLOSE'
   timeoutNotifyStrategy?: string | []
   taskParams?: ITaskParams

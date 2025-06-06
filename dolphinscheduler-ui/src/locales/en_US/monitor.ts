@@ -19,8 +19,7 @@ export default {
   master: {
     cpu_usage: 'CPU Usage',
     memory_usage: 'Memory Usage',
-    disk_available: 'Disk Available',
-    load_average: 'Load Average',
+    disk_usage: 'Disk Usage',
     create_time: 'Create Time',
     last_heartbeat_time: 'Last Heartbeat Time',
     directory_detail: 'Directory Detail',
@@ -33,8 +32,8 @@ export default {
   worker: {
     cpu_usage: 'CPU Usage',
     memory_usage: 'Memory Usage',
-    disk_available: 'Disk Available',
-    load_average: 'Load Average',
+    disk_usage: 'Disk Usage',
+    thread_pool_usage: 'Thread Pool Usage',
     create_time: 'Create Time',
     last_heartbeat_time: 'Last Heartbeat Time',
     directory_detail: 'Directory Detail',
@@ -43,6 +42,11 @@ export default {
     worker_no_data_result_title: 'No Worker Nodes Exist',
     worker_no_data_result_desc:
       'Currently, there are no worker nodes exist, please create a worker node and refresh this page'
+  },
+  alert_server: {
+    alert_server_no_data_result_title: 'No Alert Server Nodes Exist',
+    alert_server_no_data_result_desc:
+      'Currently, there are no alert server nodes exist, please create a alert server node and refresh this page'
   },
   db: {
     health_state: 'Health State',
@@ -54,9 +58,17 @@ export default {
       'Currently, there are no DB nodes exist, please create a DB node and refresh this page'
   },
   statistics: {
-    command_number_of_waiting_for_running:
-      'Command Number Of Waiting For Running',
-    failure_command_number: 'Failure Command Number'
+    command_statistics_list: 'Command Statistics List',
+    failure_command_statistics_list: 'Failure Command Statistics List',
+    command_type: 'Command Type',
+    command_param: 'Command Param',
+    task_info: 'Task Info',
+    task_params: 'Task Params',
+    worker_info: 'Worker Info',
+    warning_info: 'Warning Info',
+    executor_id: 'Executor Id',
+    message: 'Message',
+    time: 'Time'
   },
   audit_log: {
     user_name: 'User Name',

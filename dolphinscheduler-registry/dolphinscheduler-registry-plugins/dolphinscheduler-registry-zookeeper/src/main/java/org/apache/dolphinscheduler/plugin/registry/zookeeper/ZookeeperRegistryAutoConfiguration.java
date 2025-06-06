@@ -39,8 +39,10 @@ public class ZookeeperRegistryAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(value = Registry.class)
-    public ZookeeperRegistry zookeeperRegistry(ZookeeperRegistryProperties zookeeperRegistryProperties) {
-        return new ZookeeperRegistry(zookeeperRegistryProperties);
+    public Registry zookeeperRegistry(ZookeeperRegistryProperties zookeeperRegistryProperties) {
+        ZookeeperRegistry zookeeperRegistry = new ZookeeperRegistry(zookeeperRegistryProperties);
+        zookeeperRegistry.start();
+        return zookeeperRegistry;
     }
 
 }

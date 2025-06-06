@@ -43,9 +43,6 @@ import org.springframework.util.MultiValueMap;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-/**
- * data analysis controller test
- */
 public class DataAnalysisControllerTest extends AbstractControllerTest {
 
     private static final Logger logger = LoggerFactory.getLogger(DataAnalysisControllerTest.class);
@@ -95,7 +92,7 @@ public class DataAnalysisControllerTest extends AbstractControllerTest {
         paramsMap.add("endDate", "2019-12-28 00:00:00");
         paramsMap.add("projectCode", "16");
 
-        MvcResult mvcResult = mockMvc.perform(get("/projects/analysis/process-state-count")
+        MvcResult mvcResult = mockMvc.perform(get("/projects/analysis/workflow-state-count")
                 .header("sessionId", sessionId)
                 .params(paramsMap))
                 .andExpect(status().isOk())
@@ -143,6 +140,42 @@ public class DataAnalysisControllerTest extends AbstractControllerTest {
     public void testCountQueueState() throws Exception {
         MvcResult mvcResult = mockMvc.perform(get("/projects/analysis/queue-count")
                 .header("sessionId", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        assertThat(result.getCode().intValue()).isEqualTo(Status.SUCCESS.getCode());
+        logger.info(mvcResult.getResponse().getContentAsString());
+    }
+
+    @Test
+    public void testListCommand() throws Exception {
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("projectCode", "16");
+        paramsMap.add("pageNo", "1");
+        paramsMap.add("pageSize", "10");
+
+        MvcResult mvcResult = mockMvc.perform(get("/projects/analysis/listCommand")
+                .header("sessionId", sessionId)
+                .params(paramsMap))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        Result result = JSONUtils.parseObject(mvcResult.getResponse().getContentAsString(), Result.class);
+        assertThat(result.getCode().intValue()).isEqualTo(Status.SUCCESS.getCode());
+        logger.info(mvcResult.getResponse().getContentAsString());
+    }
+
+    @Test
+    public void testListErrorCommand() throws Exception {
+        MultiValueMap<String, String> paramsMap = new LinkedMultiValueMap<>();
+        paramsMap.add("projectCode", "16");
+        paramsMap.add("pageNo", "1");
+        paramsMap.add("pageSize", "10");
+
+        MvcResult mvcResult = mockMvc.perform(get("/projects/analysis/listErrorCommand")
+                .header("sessionId", sessionId)
+                .params(paramsMap))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn();

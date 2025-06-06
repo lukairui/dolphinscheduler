@@ -16,7 +16,7 @@
  */
 
 import { defineComponent, onMounted, ref, toRefs } from 'vue'
-import { NGrid, NGi, NCard, NNumberAnimation, NSpace } from 'naive-ui'
+import { NGrid, NGi, NCard, NSpace, NTag } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useMaster } from './use-master'
 import styles from './index.module.scss'
@@ -27,6 +27,7 @@ import MasterModal from './master-modal'
 import type { Ref } from 'vue'
 import type { RowData } from 'naive-ui/es/data-table/src/interface'
 import type { MasterNode } from '@/service/modules/monitor/types'
+import { capitalize } from 'lodash'
 
 const master = defineComponent({
   name: 'master',
@@ -62,6 +63,18 @@ const master = defineComponent({
     const { t, clickDetails, onConfirmModal, showModalRef, zkDirectoryRef } =
       this
 
+    const renderNodeServerStatusTag = (item: MasterNode) => {
+      const serverStatus = JSON.parse(item.heartBeatInfo)?.serverStatus
+
+      if (!serverStatus) return ''
+
+      return (
+        <NTag type={serverStatus === 'NORMAL' ? 'info' : 'warning'}>
+          {capitalize(serverStatus)}
+        </NTag>
+      )
+    }
+
     return this.data.length < 1 ? (
       <Result
         title={t('monitor.master.master_no_data_result_title')}
@@ -76,14 +89,21 @@ const master = defineComponent({
             return (
               <NSpace vertical>
                 <NCard>
-                  <NSpace justify='space-between'>
+                  <NSpace
+                    justify='space-between'
+                    style={{
+                      'line-height': '28px'
+                    }}
+                  >
                     <NSpace>
+                      {renderNodeServerStatusTag(item)}
+
                       <span>{`${t('monitor.master.host')}: ${
                         item ? item.host : ' - '
                       }`}</span>
                       <span
                         class={styles['link-btn']}
-                        onClick={() => clickDetails(item.zkDirectory)}
+                        onClick={() => clickDetails(item.serverDirectory)}
                       >
                         {t('monitor.master.directory_detail')}
                       </span>
@@ -105,7 +125,7 @@ const master = defineComponent({
                         {item && (
                           <Gauge
                             data={(
-                              JSON.parse(item.resInfo).cpuUsage * 100
+                              JSON.parse(item.heartBeatInfo).cpuUsage * 100
                             ).toFixed(2)}
                           />
                         )}
@@ -118,7 +138,7 @@ const master = defineComponent({
                         {item && (
                           <Gauge
                             data={(
-                              JSON.parse(item.resInfo).memoryUsage * 100
+                              JSON.parse(item.heartBeatInfo).memoryUsage * 100
                             ).toFixed(2)}
                           />
                         )}
@@ -126,26 +146,13 @@ const master = defineComponent({
                     </Card>
                   </NGi>
                   <NGi>
-                    <Card title={t('monitor.master.disk_available')}>
-                      <div class={[styles.card, styles['load-average']]}>
+                    <Card title={t('monitor.master.disk_usage')}>
+                      <div class={[styles.card]}>
                         {item && (
-                          <NNumberAnimation
-                            precision={2}
-                            from={0}
-                            to={JSON.parse(item.resInfo).diskAvailable}
-                          />
-                        )}
-                      </div>
-                    </Card>
-                  </NGi>
-                  <NGi>
-                    <Card title={t('monitor.master.load_average')}>
-                      <div class={[styles.card, styles['load-average']]}>
-                        {item && (
-                          <NNumberAnimation
-                            precision={2}
-                            from={0}
-                            to={JSON.parse(item.resInfo).loadAverage}
+                          <Gauge
+                            data={(
+                              JSON.parse(item.heartBeatInfo).diskUsage * 100
+                            ).toFixed(2)}
                           />
                         )}
                       </div>

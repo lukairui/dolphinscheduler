@@ -20,7 +20,6 @@ package org.apache.dolphinscheduler.plugin.task.datax;
 import static org.apache.dolphinscheduler.plugin.datasource.api.utils.PasswordUtils.decodePassword;
 import static org.apache.dolphinscheduler.plugin.task.api.TaskConstants.EXIT_CODE_FAILURE;
 
-import org.apache.dolphinscheduler.common.log.SensitiveDataConverter;
 import org.apache.dolphinscheduler.common.utils.JSONUtils;
 import org.apache.dolphinscheduler.plugin.datasource.api.plugin.DataSourceClientProvider;
 import org.apache.dolphinscheduler.plugin.datasource.api.utils.DataSourceUtils;
@@ -29,6 +28,7 @@ import org.apache.dolphinscheduler.plugin.task.api.ShellCommandExecutor;
 import org.apache.dolphinscheduler.plugin.task.api.TaskCallBack;
 import org.apache.dolphinscheduler.plugin.task.api.TaskException;
 import org.apache.dolphinscheduler.plugin.task.api.TaskExecutionContext;
+import org.apache.dolphinscheduler.plugin.task.api.log.SensitiveDataConverter;
 import org.apache.dolphinscheduler.plugin.task.api.model.Property;
 import org.apache.dolphinscheduler.plugin.task.api.model.TaskResponse;
 import org.apache.dolphinscheduler.plugin.task.api.parameters.AbstractParameters;
@@ -41,6 +41,7 @@ import org.apache.dolphinscheduler.spi.enums.Flag;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -420,7 +421,7 @@ public class DataxTask extends AbstractTask {
      */
     private String[] parsingSqlColumnNames(DbType sourceType, DbType targetType, BaseConnectionParam dataSourceCfg,
                                            String sql) {
-        String[] columnNames = tryGrammaticalAnalysisSqlColumnNames(sourceType, sql);
+        String[] columnNames = tryGrammaticalAnalysisSqlColumnNames(sourceType, sql, dataSourceCfg.getCompatibleMode());
 
         if (columnNames == null || columnNames.length == 0) {
             log.info("try to execute sql analysis query column name");
@@ -440,11 +441,14 @@ public class DataxTask extends AbstractTask {
      * @return column name array
      * @throws RuntimeException if error throws RuntimeException
      */
-    private String[] tryGrammaticalAnalysisSqlColumnNames(DbType dbType, String sql) {
+    private String[] tryGrammaticalAnalysisSqlColumnNames(DbType dbType, String sql, String compatibleMode) {
         String[] columnNames;
 
         try {
             SQLStatementParser parser = DataxUtils.getSqlStatementParser(dbType, sql);
+            if (StringUtils.isNotBlank(compatibleMode)) {
+                parser = DataxUtils.getSqlStatementParser(compatibleMode, sql);
+            }
             if (parser == null) {
                 log.warn("database driver [{}] is not support grammatical analysis sql", dbType);
                 return new String[0];
@@ -530,7 +534,7 @@ public class DataxTask extends AbstractTask {
             int num = md.getColumnCount();
             columnNames = new String[num];
             for (int i = 1; i <= num; i++) {
-                columnNames[i - 1] = md.getColumnName(i).replace("t.", "");
+                columnNames[i - 1] = md.getColumnLabel(i).replace("t.", "");
             }
         } catch (SQLException | ExecutionException e) {
             log.error(e.getMessage(), e);

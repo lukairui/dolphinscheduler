@@ -27,14 +27,7 @@ docker compose up
 
 ## 配置
 
-- 请按照如下配置在您的 master/worker/alert/api's yaml 文件里启用metrics exporter：
-
-```yaml
-metrics:
-  enabled: true
-```
-
-- 当您启用metrics exporter后，您可通过链接`http://ip:port/actuator/prometheus`获取metrics。
+您可通过链接`http://ip:port/actuator/prometheus`获取metrics。
 
 metrics exporter端口`server.port`是在application.yaml里定义的: master: `server.port: 5679`, worker: `server.port: 1235`, alert: `server.port: 50053`, api: `server.port: 12345`.
 
@@ -90,6 +83,11 @@ metrics exporter端口`server.port`是在application.yaml里定义的: master: `
   - fail：运行失败的工作流实例数量
   - stop：停止的工作流实例数量
   - failover：容错的工作流实例数量
+
+### RPC相关指标
+
+- ds.rpc.client.sync.request.exception.count: (counter) 同步rpc请求异常数
+- ds.rpc.client.sync.request.duration.time: (histogram) 同步rpc请求耗时
 
 ### Master Server指标
 

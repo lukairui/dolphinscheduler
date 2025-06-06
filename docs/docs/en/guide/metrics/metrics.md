@@ -27,14 +27,7 @@ then access the `Grafana` by the url: `http://localhost:3001` for dashboards.
 
 ## Configuration
 
-- Please add the following config in master/worker/alert/api's yaml file to enable the metrics exporter.
-
-```yaml
-metrics:
-  enabled: true
-```
-
-- Once the metrics exporter enabled, you could access the metrics by the url `http://ip:port/actuator/prometheus`.
+You could access the metrics by the url `http://ip:port/actuator/prometheus`.
 
 The exporter port is the `server.port` defined in application.yaml, e.g: master: `server.port: 5679`, worker: `server.port: 1235`, alert: `server.port: 50053`, api: `server.port: 12345`.
 
@@ -90,6 +83,11 @@ For example, you can get the master metrics by `curl http://localhost:5679/actua
   - fail: the number of failed workflow instances
   - stop: the number of stopped workflow instances
   - failover: the number of workflow instance fail-overs
+
+### RPC Related Metrics
+
+- ds.rpc.client.sync.request.exception.count: (counter) the number of exceptions occurred in sync rpc requests
+- ds.rpc.client.sync.request.duration.time: (histogram) the time cost of sync rpc requests
 
 ### Master Server Metrics
 

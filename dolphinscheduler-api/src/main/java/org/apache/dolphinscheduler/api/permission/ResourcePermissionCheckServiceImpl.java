@@ -14,22 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 package org.apache.dolphinscheduler.api.permission;
 
@@ -46,7 +30,6 @@ import org.apache.dolphinscheduler.dao.entity.Project;
 import org.apache.dolphinscheduler.dao.entity.Queue;
 import org.apache.dolphinscheduler.dao.entity.TaskGroup;
 import org.apache.dolphinscheduler.dao.entity.Tenant;
-import org.apache.dolphinscheduler.dao.entity.UdfFunc;
 import org.apache.dolphinscheduler.dao.entity.User;
 import org.apache.dolphinscheduler.dao.entity.WorkerGroup;
 import org.apache.dolphinscheduler.dao.mapper.AccessTokenMapper;
@@ -59,8 +42,8 @@ import org.apache.dolphinscheduler.dao.mapper.ProjectMapper;
 import org.apache.dolphinscheduler.dao.mapper.QueueMapper;
 import org.apache.dolphinscheduler.dao.mapper.TaskGroupMapper;
 import org.apache.dolphinscheduler.dao.mapper.TenantMapper;
-import org.apache.dolphinscheduler.dao.mapper.UdfFuncMapper;
-import org.apache.dolphinscheduler.dao.mapper.WorkerGroupMapper;
+import org.apache.dolphinscheduler.dao.repository.UserDao;
+import org.apache.dolphinscheduler.dao.repository.WorkerGroupDao;
 import org.apache.dolphinscheduler.service.process.ProcessService;
 
 import java.util.Arrays;
@@ -202,32 +185,6 @@ public class ResourcePermissionCheckServiceImpl
     }
 
     @Component
-    public static class UdfFuncPermissionCheck implements ResourceAcquisitionAndPermissionCheck<Integer> {
-
-        private final UdfFuncMapper udfFuncMapper;
-
-        public UdfFuncPermissionCheck(UdfFuncMapper udfFuncMapper) {
-            this.udfFuncMapper = udfFuncMapper;
-        }
-
-        @Override
-        public List<AuthorizationType> authorizationTypes() {
-            return Collections.singletonList(AuthorizationType.UDF);
-        }
-
-        @Override
-        public Set<Integer> listAuthorizedResourceIds(int userId, Logger logger) {
-            List<UdfFunc> udfFuncList = udfFuncMapper.listAuthorizedUdfByUserId(userId);
-            return udfFuncList.stream().map(UdfFunc::getId).collect(toSet());
-        }
-
-        @Override
-        public boolean permissionCheck(int userId, String permissionKey, Logger logger) {
-            return true;
-        }
-    }
-
-    @Component
     public static class TaskGroupPermissionCheck implements ResourceAcquisitionAndPermissionCheck<Integer> {
 
         private final TaskGroupMapper taskGroupMapper;
@@ -284,8 +241,11 @@ public class ResourcePermissionCheckServiceImpl
 
         private final EnvironmentMapper environmentMapper;
 
-        public EnvironmentResourcePermissionCheck(EnvironmentMapper environmentMapper) {
+        private final UserDao userDao;
+
+        public EnvironmentResourcePermissionCheck(EnvironmentMapper environmentMapper, UserDao userDao) {
             this.environmentMapper = environmentMapper;
+            this.userDao = userDao;
         }
 
         @Override
@@ -295,7 +255,12 @@ public class ResourcePermissionCheckServiceImpl
 
         @Override
         public boolean permissionCheck(int userId, String url, Logger logger) {
-            return true;
+            User user = userDao.queryById(userId);
+            if (user == null) {
+                logger.error("User does not exist, userId:{}.", userId);
+                return false;
+            }
+            return user.getUserType() == UserType.ADMIN_USER;
         }
 
         @Override
@@ -308,10 +273,10 @@ public class ResourcePermissionCheckServiceImpl
     @Component
     public static class WorkerGroupResourcePermissionCheck implements ResourceAcquisitionAndPermissionCheck<Integer> {
 
-        private final WorkerGroupMapper workerGroupMapper;
+        private final WorkerGroupDao workerGroupDao;
 
-        public WorkerGroupResourcePermissionCheck(WorkerGroupMapper workerGroupMapper) {
-            this.workerGroupMapper = workerGroupMapper;
+        public WorkerGroupResourcePermissionCheck(WorkerGroupDao workerGroupDao) {
+            this.workerGroupDao = workerGroupDao;
         }
 
         @Override
@@ -326,7 +291,7 @@ public class ResourcePermissionCheckServiceImpl
 
         @Override
         public Set<Integer> listAuthorizedResourceIds(int userId, Logger logger) {
-            List<WorkerGroup> workerGroups = workerGroupMapper.queryAllWorkerGroup();
+            List<WorkerGroup> workerGroups = workerGroupDao.queryAllWorkerGroup();
             return workerGroups.stream().map(WorkerGroup::getId).collect(Collectors.toSet());
         }
     }
@@ -481,6 +446,7 @@ public class ResourcePermissionCheckServiceImpl
 
         /**
          * authorization types
+         *
          * @return
          */
         List<AuthorizationType> authorizationTypes();
@@ -495,6 +461,7 @@ public class ResourcePermissionCheckServiceImpl
 
         /**
          * permission check
+         *
          * @param userId
          * @return
          */

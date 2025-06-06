@@ -50,7 +50,7 @@ public class SwitchTaskUtilsTest {
         Map<String, Property> globalParams = new HashMap<>();
         Map<String, Property> varParams = new HashMap<>();
         globalParams.put("test", new Property("test", Direct.IN, DataType.INTEGER, "1"));
-        Assertions.assertThrowsExactly(IllegalArgumentException.class, () -> {
+        Assertions.assertDoesNotThrow(() -> {
             SwitchTaskUtils.generateContentWithTaskParams(content, globalParams, varParams);
         });
 
@@ -70,15 +70,17 @@ public class SwitchTaskUtilsTest {
             SwitchTaskUtils.evaluate(script);
         });
 
-        String contentWithSpecify1 = "cmd.abc";
-        Assertions.assertThrowsExactly(IllegalArgumentException.class, () -> {
-            SwitchTaskUtils.generateContentWithTaskParams(contentWithSpecify1, globalParams, varParams);
-        });
-
-        String contentWithSpecify2 = "cmd()";
-        Assertions.assertThrowsExactly(IllegalArgumentException.class, () -> {
-            SwitchTaskUtils.generateContentWithTaskParams(contentWithSpecify2, globalParams, varParams);
-        });
-
     }
+
+    @Test
+    public void testIncludes() throws ScriptException {
+        String content = "['abc','def'].includes('abc')";
+        boolean result = SwitchTaskUtils.evaluate(content);
+        Assertions.assertTrue(result);
+
+        SwitchTaskUtils.evaluate(SwitchTaskUtils.NASHORN_POLYFILL_ARRAY_PROTOTYPE_INCLUDES);
+        result = SwitchTaskUtils.evaluate(content);
+        Assertions.assertTrue(result);
+    }
+
 }

@@ -19,13 +19,6 @@ DolphinScheduler的目录结构如下：
 │   ├── dolphinscheduler-daemon.sh              启动/关闭DolphinScheduler服务脚本
 │   ├── env                                     环境变量配置存放目录
 │   │   ├── dolphinscheduler_env.sh             当使用`dolphinscheduler-daemon.sh`脚本起停服务时，运行此脚本加载环境变量配置文件 [如：JAVA_HOME,HADOOP_HOME, HIVE_HOME ...]
-│   │   └── install_env.sh                      当使用`install.sh` `start-all.sh` `stop-all.sh` `status-all.sh`脚本时，运行此脚本为DolphinScheduler安装加载环境变量配置
-│   ├── install.sh                              当使用`集群`模式或`伪集群`模式部署DolphinScheduler时，运行此脚本自动安装服务
-│   ├── remove-zk-node.sh                       清理zookeeper缓存文件脚本
-│   ├── scp-hosts.sh                            安装文件传输脚本
-│   ├── start-all.sh                            当使用`集群`模式或`伪集群`模式部署DolphinScheduler时，运行此脚本启动所有服务
-│   ├── status-all.sh                           当使用`集群`模式或`伪集群`模式部署DolphinScheduler时，运行此脚本获取所有服务状态
-│   └── stop-all.sh                             当使用`集群`模式或`伪集群`模式部署DolphinScheduler时，运行此脚本终止所有服务
 │
 ├── alert-server                                DolphinScheduler alert-server命令、配置和依赖存放目录
 │   ├── bin
@@ -165,9 +158,9 @@ export DOLPHINSCHEDULER_OPTS="
 DolphinScheduler同样可以通过设置环境变量进行数据库连接相关的配置, 将以上小写字母转成大写并把`.`换成`_`作为环境变量名,
 设置值即可。
 
-## Zookeeper相关配置
+## 注册中心相关配置
 
-DolphinScheduler使用Zookeeper进行集群管理、容错、事件监听等功能，配置文件位置：
+DolphinScheduler默认使用Zookeeper进行集群管理、容错、事件监听等功能，配置文件位置：
 |服务名称| 配置文件 |
 |--|--|
 |Master Server | `master-server/conf/application.yaml`|
@@ -189,6 +182,9 @@ DolphinScheduler使用Zookeeper进行集群管理、容错、事件监听等功�
 | registry.zookeeper.digest                       | {用户名:密码}         | 如果zookeeper打开了acl，则需要填写认证信息访问znode，认证信息格式为{用户名}:{密码}。关于Zookeeper ACL详见[https://zookeeper.apache.org/doc/r3.4.14/zookeeperAdmin.html](Apache Zookeeper官方文档) |
 
 DolphinScheduler同样可以通过`bin/env/dolphinscheduler_env.sh`进行Zookeeper相关的配置。
+
+如果使用etcd作为注册中心，详细请参考[链接](https://github.com/apache/dolphinscheduler/blob/dev/dolphinscheduler-registry/dolphinscheduler-registry-plugins/dolphinscheduler-registry-etcd/README.md)。
+如果使用jdbc作为注册中心，详细请参考[链接](https://github.com/apache/dolphinscheduler/blob/dev/dolphinscheduler-registry/dolphinscheduler-registry-plugins/dolphinscheduler-registry-jdbc/README.md)。
 
 ## common.properties [hadoop、s3、yarn配置]
 
@@ -228,10 +224,8 @@ common.properties配置文件目前主要是配置hadoop/s3/yarn/applicationId�
 | yarn.job.history.status.address               | http://ds1:19888/ws/v1/history/mapreduce/jobs/%s | yarn的作业历史状态URL                                                                                                                                                                                                       |
 | datasource.encryption.enable                  | false                                            | 是否启用datasource 加密                                                                                                                                                                                                    |
 | datasource.encryption.salt                    | !@#$%^&*                                         | datasource加密使用的salt                                                                                                                                                                                                  |
-| data-quality.jar.dir                          |                                                  | 配置数据质量使用的jar包                                                                                                                                                                                                        |
 | support.hive.oneSession                       | false                                            | 设置hive SQL是否在同一个session中执行                                                                                                                                                                                           |
 | sudo.enable                                   | true                                             | 是否开启sudo                                                                                                                                                                                                             |
-| alert.rpc.port                                | 50052                                            | Alert Server的RPC端口                                                                                                                                                                                                   |
 | zeppelin.rest.url                             | http://localhost:8080                            | zeppelin RESTful API 接口地址                                                                                                                                                                                            |
 | appId.collect                                 | log                                              | 收集applicationId方式， 如果用aop方法，将配置log替换为aop，并将`bin/env/dolphinscheduler_env.sh`自动收集applicationId相关环境变量配置的注释取消掉，注意：aop不支持远程主机提交yarn作业的方式比如Beeline客户端提交，且如果用户环境覆盖了dolphinscheduler_env.sh收集applicationId相关环境变量配置，aop方法会失效 |
 
@@ -281,55 +275,49 @@ common.properties配置文件目前主要是配置hadoop/s3/yarn/applicationId�
 
 位置：`master-server/conf/application.yaml`
 
-|                                     参数                                      |      默认值      |                                                                    描述                                                                    |
-|-----------------------------------------------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------|
-| master.listen-port                                                          | 5678          | master监听端口                                                                                                                               |
-| master.pre-exec-threads                                                     | 10            | master准备执行任务的数量，用于限制并行的command                                                                                                           |
-| master.exec-threads                                                         | 100           | master工作线程数量,用于限制并行的流程实例数量                                                                                                               |
-| master.dispatch-task-number                                                 | 3             | master每个批次的派发任务数量                                                                                                                        |
-| master.host-selector                                                        | lower_weight  | master host选择器,用于选择合适的worker执行任务,可选值: random, round_robin, lower_weight                                                                  |
-| master.max-heartbeat-interval                                               | 10s           | master最大心跳间隔                                                                                                                             |
-| master.task-commit-retry-times                                              | 5             | 任务重试次数                                                                                                                                   |
-| master.task-commit-interval                                                 | 1000          | 任务提交间隔,单位为毫秒                                                                                                                             |
-| master.state-wheel-interval                                                 | 5             | 轮询检查状态时间                                                                                                                                 |
-| master.server-load-protection.enabled                                       | true          | 是否开启系统保护策略                                                                                                                               |
-| master.server-load-protection.max-system-cpu-usage-percentage-thresholds    | 0.7           | master最大系统cpu使用值,只有当前系统cpu使用值低于最大系统cpu使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的操作系统CPU                                                        |
-| master.server-load-protection.max-jvm-cpu-usage-percentage-thresholds       | 0.7           | master最大JVM cpu使用值,只有当前JVM cpu使用值低于最大JVM cpu使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的JVM CPU                                                  |
-| master.server-load-protection.max-system-memory-usage-percentage-thresholds | 0.7           | master最大系统 内存使用值,只有当前系统内存使用值低于最大系统内存使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的操作系统内存                                                           |
-| master.server-load-protection.max-disk-usage-percentage-thresholds          | 0.7           | master最大系统磁盘使用值,只有当前系统磁盘使用值低于最大系统磁盘使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的操作系统磁盘空间                                                          |
-| master.failover-interval                                                    | 10            | failover间隔，单位为分钟                                                                                                                         |
-| master.kill-application-when-task-failover                                  | true          | 当任务实例failover时，是否kill掉yarn或k8s application                                                                                               |
-| master.registry-disconnect-strategy.strategy                                | stop          | 当Master与注册中心失联之后采取的策略, 默认值是: stop. 可选值包括： stop, waiting                                                                                  |
-| master.registry-disconnect-strategy.max-waiting-time                        | 100s          | 当Master与注册中心失联之后重连时间, 之后当strategy为waiting时，该值生效。 该值表示当Master与注册中心失联时会在给定时间之内进行重连, 在给定时间之内重连失败将会停止自己，在重连时，Master会丢弃目前正在执行的工作流，值为0表示会无限期等待 |
-| master.master.worker-group-refresh-interval                                 | 10s           | 定期将workerGroup从数据库中同步到内存的时间间隔                                                                                                            |
-| master.command-fetch-strategy.type                                          | ID_SLOT_BASED | Command拉取策略, 目前仅支持 `ID_SLOT_BASED`                                                                                                       |
-| master.command-fetch-strategy.config.id-step                                | 1             | 数据库中t_ds_command的id自增步长                                                                                                                  |
-| master.command-fetch-strategy.config.fetch-size                             | 10            | master拉取command数量                                                                                                                        |
+|                                     参数                                      |             默认值              |                                           描述                                            |
+|-----------------------------------------------------------------------------|------------------------------|-----------------------------------------------------------------------------------------|
+| master.listen-port                                                          | 5678                         | master监听端口                                                                              |
+| master.pre-exec-threads                                                     | 10                           | master准备执行任务的数量，用于限制并行的command                                                          |
+| master.exec-threads                                                         | 100                          | master工作线程数量,用于限制并行的流程实例数量                                                              |
+| master.dispatch-task-number                                                 | 3                            | master每个批次的派发任务数量                                                                       |
+| master.worker-load-balancer-configuration-properties.type                   | DYNAMIC_WEIGHTED_ROUND_ROBIN | Master 将会使用Worker的动态CPU/Memory/线程池使用率来计算Worker的负载，负载越低的worker将会有更高的机会被分发任务              |
+| master.max-heartbeat-interval                                               | 10s                          | master最大心跳间隔                                                                            |
+| master.task-commit-retry-times                                              | 5                            | 任务重试次数                                                                                  |
+| master.task-commit-interval                                                 | 1000                         | 任务提交间隔,单位为毫秒                                                                            |
+| master.state-wheel-interval                                                 | 5                            | 轮询检查状态时间                                                                                |
+| master.server-load-protection.enabled                                       | true                         | 是否开启系统保护策略                                                                              |
+| master.server-load-protection.max-system-cpu-usage-percentage-thresholds    | 0.7                          | master最大系统cpu使用值,只有当前系统cpu使用值低于最大系统cpu使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的操作系统CPU       |
+| master.server-load-protection.max-jvm-cpu-usage-percentage-thresholds       | 0.7                          | master最大JVM cpu使用值,只有当前JVM cpu使用值低于最大JVM cpu使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的JVM CPU |
+| master.server-load-protection.max-system-memory-usage-percentage-thresholds | 0.7                          | master最大系统 内存使用值,只有当前系统内存使用值低于最大系统内存使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的操作系统内存          |
+| master.server-load-protection.max-disk-usage-percentage-thresholds          | 0.7                          | master最大系统磁盘使用值,只有当前系统磁盘使用值低于最大系统磁盘使用值,master服务才能调度任务. 默认值为0.7: 会使用70%的操作系统磁盘空间         |
+| master.failover-interval                                                    | 10                           | failover间隔，单位为分钟                                                                        |
+| master.kill-application-when-task-failover                                  | true                         | 当任务实例failover时，是否kill掉yarn或k8s application                                              |
+| master.master.worker-group-refresh-interval                                 | 10s                          | 定期将workerGroup从数据库中同步到内存的时间间隔                                                           |
+| master.command-fetch-strategy.type                                          | ID_SLOT_BASED                | Command拉取策略, 目前仅支持 `ID_SLOT_BASED`                                                      |
+| master.command-fetch-strategy.config.id-step                                | 1                            | 数据库中t_ds_command的id自增步长                                                                 |
+| master.command-fetch-strategy.config.fetch-size                             | 10                           | master拉取command数量                                                                       |
 
 ## Worker Server相关配置
 
 位置：`worker-server/conf/application.yaml`
 
-|                                     参数                                      |    默认值    |                                                                    描述                                                                     |
-|-----------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| worker.listen-port                                                          | 1234      | worker监听端口                                                                                                                                |
-| worker.exec-threads                                                         | 100       | worker工作线程数量,用于限制并行的任务实例数量                                                                                                                |
-| worker.max-heartbeat-interval                                               | 10s       | worker最大心跳间隔                                                                                                                              |
-| worker.host-weight                                                          | 100       | 派发任务时，worker主机的权重                                                                                                                         |
-| worker.tenant-auto-create                                                   | true      | 租户对应于系统的用户,由worker提交作业.如果系统没有该用户,则在参数worker.tenant.auto.create为true后自动创建。                                                                 |
-| worker.server-load-protection.enabled                                       | true      | 是否开启系统保护策略                                                                                                                                |
-| worker.server-load-protection.max-system-cpu-usage-percentage-thresholds    | 0.7       | worker最大系统cpu使用值,只有当前系统cpu使用值低于最大系统cpu使用值,worker服务才能接收任务. 默认值为0.7: 会使用70%的操作系统CPU                                                         |
-| worker.server-load-protection.max-jvm-cpu-usage-percentage-thresholds       | 0.7       | worker最大JVM cpu使用值,只有当前JVM cpu使用值低于最大JVM cpu使用值,worker服务才能接收任务. 默认值为0.7: 会使用70%的JVM CPU                                                   |
-| worker.server-load-protection.max-system-memory-usage-percentage-thresholds | 0.7       | worker最大系统 内存使用值,只有当前系统内存使用值低于最大系统内存使用值,worker服务才能接收任务. 默认值为0.7: 会使用70%的操作系统内存                                                            |
-| worker.server-load-protection.max-disk-usage-percentage-thresholds          | 0.7       | worker最大系统磁盘使用值,只有当前系统磁盘使用值低于最大系统磁盘使用值,worker服务才能接收任务. 默认值为0.7: 会使用70%的操作系统磁盘空间                                                           |
-| worker.alert-listen-host                                                    | localhost | alert监听host                                                                                                                               |
-| worker.alert-listen-port                                                    | 50052     | alert监听端口                                                                                                                                 |
-| worker.registry-disconnect-strategy.strategy                                | stop      | 当Worker与注册中心失联之后采取的策略, 默认值是: stop. 可选值包括： stop, waiting                                                                                   |
-| worker.registry-disconnect-strategy.max-waiting-time                        | 100s      | 当Worker与注册中心失联之后重连时间, 之后当strategy为waiting时，该值生效。 该值表示当Worker与注册中心失联时会在给定时间之内进行重连, 在给定时间之内重连失败将会停止自己，在重连时，Worker会丢弃kill正在执行的任务。值为0表示会无限期等待 |
-| worker.task-execute-threads-full-policy                                     | REJECT    | 如果是 REJECT, 当Worker中等待队列中的任务数达到exec-threads时, Worker将会拒绝接下来新接收的任务，Master将会重新分发该任务; 如果是 CONTINUE, Worker将会接收任务，放入等待队列中等待空闲线程去执行该任务         |
-| worker.tenant-config.auto-create-tenant-enabled                             | true      | 租户对应于系统的用户,由worker提交作业.如果系统没有该用户,则在参数worker.tenant.auto.create为true后自动创建。                                                                 |
-| worker.tenant-config.distributed-tenant-enabled                             | false     | 如果设置为true, auto-create-tenant-enabled 将会不起作用。                                                                                             |
-| worker.tenant-config.default-tenant-enabled                                 | false     | 如果设置为true, 将会使用worker服务启动用户作为 `default` 租户。                                                                                               |
+|                                     参数                                      |    默认值    |                                           描述                                            |
+|-----------------------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------|
+| worker.listen-port                                                          | 1234      | worker监听端口                                                                              |
+| worker.max-heartbeat-interval                                               | 10s       | worker最大心跳间隔                                                                            |
+| worker.host-weight                                                          | 100       | 派发任务时，worker主机的权重                                                                       |
+| worker.tenant-auto-create                                                   | true      | 租户对应于系统的用户,由worker提交作业.如果系统没有该用户,则在参数worker.tenant.auto.create为true后自动创建。               |
+| worker.server-load-protection.enabled                                       | true      | 是否开启系统保护策略                                                                              |
+| worker.server-load-protection.max-system-cpu-usage-percentage-thresholds    | 0.8       | worker最大系统cpu使用值,只有当前系统cpu使用值低于最大系统cpu使用值,worker服务才能接收任务. 默认值为0.8: 会使用80%的操作系统CPU       |
+| worker.server-load-protection.max-jvm-cpu-usage-percentage-thresholds       | 0.8       | worker最大JVM cpu使用值,只有当前JVM cpu使用值低于最大JVM cpu使用值,worker服务才能接收任务. 默认值为0.8: 会使用80%的JVM CPU |
+| worker.server-load-protection.max-system-memory-usage-percentage-thresholds | 0.8       | worker最大系统 内存使用值,只有当前系统内存使用值低于最大系统内存使用值,worker服务才能接收任务. 默认值为0.8: 会使用80%的操作系统内存          |
+| worker.server-load-protection.max-disk-usage-percentage-thresholds          | 0.8       | worker最大系统磁盘使用值,只有当前系统磁盘使用值低于最大系统磁盘使用值,worker服务才能接收任务. 默认值为0.8: 会使用80%的操作系统磁盘空间         |
+| worker.alert-listen-host                                                    | localhost | alert监听host                                                                             |
+| worker.alert-listen-port                                                    | 50052     | alert监听端口                                                                               |
+| worker.physical-task-config.task-executor-thread-size                       | 100       | Worker中任务最大并发度                                                                          |
+| worker.tenant-config.auto-create-tenant-enabled                             | true      | 租户对应于系统的用户,由worker提交作业.如果系统没有该用户,则在参数worker.tenant.auto.create为true后自动创建。               |
+| worker.tenant-config.default-tenant-enabled                                 | false     | 如果设置为true, 将会使用worker服务启动用户作为 `default` 租户。                                             |
 
 ## Alert Server相关配置
 

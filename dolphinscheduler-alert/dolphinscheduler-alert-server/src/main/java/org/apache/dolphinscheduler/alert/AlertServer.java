@@ -22,7 +22,7 @@ import org.apache.dolphinscheduler.alert.plugin.AlertPluginManager;
 import org.apache.dolphinscheduler.alert.registry.AlertRegistryClient;
 import org.apache.dolphinscheduler.alert.rpc.AlertRpcServer;
 import org.apache.dolphinscheduler.alert.service.AlertBootstrapService;
-import org.apache.dolphinscheduler.alert.service.ListenerEventPostService;
+import org.apache.dolphinscheduler.alert.service.AlertHAServer;
 import org.apache.dolphinscheduler.common.CommonConfiguration;
 import org.apache.dolphinscheduler.common.constants.Constants;
 import org.apache.dolphinscheduler.common.lifecycle.ServerLifeCycleManager;
@@ -30,6 +30,7 @@ import org.apache.dolphinscheduler.common.thread.DefaultUncaughtExceptionHandler
 import org.apache.dolphinscheduler.common.thread.ThreadUtils;
 import org.apache.dolphinscheduler.dao.DaoConfiguration;
 import org.apache.dolphinscheduler.registry.api.RegistryConfiguration;
+import org.apache.dolphinscheduler.registry.api.ha.AbstractServerStatusChangeListener;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -49,15 +50,19 @@ import org.springframework.context.annotation.Import;
 public class AlertServer {
 
     @Autowired
-    private AlertBootstrapService alertBootstrapService;
-    @Autowired
-    private ListenerEventPostService listenerEventPostService;
-    @Autowired
     private AlertRpcServer alertRpcServer;
+
     @Autowired
     private AlertPluginManager alertPluginManager;
+
     @Autowired
     private AlertRegistryClient alertRegistryClient;
+
+    @Autowired
+    private AlertHAServer alertHAServer;
+
+    @Autowired
+    private AlertBootstrapService alertBootstrapService;
 
     public static void main(String[] args) {
         AlertServerMetrics.registerUncachedException(DefaultUncaughtExceptionHandler::getUncaughtExceptionCount);
@@ -68,27 +73,33 @@ public class AlertServer {
 
     @PostConstruct
     public void run() {
-        log.info("Alert server is staring ...");
+        ServerLifeCycleManager.toRunning();
+        log.info("AlertServer is staring ...");
         alertPluginManager.start();
-        alertRegistryClient.start();
-        alertBootstrapService.start();
-        listenerEventPostService.start();
         alertRpcServer.start();
-        log.info("Alert server is started ...");
+        alertRegistryClient.start();
+
+        alertHAServer.addServerStatusChangeListener(new AbstractServerStatusChangeListener() {
+
+            @Override
+            public void changeToActive() {
+                alertBootstrapService.start();
+            }
+
+            @Override
+            public void changeToStandBy() {
+                close();
+            }
+        });
+
+        alertHAServer.start();
+
+        log.info("AlertServer is started ...");
     }
 
     @PreDestroy
     public void close() {
-        destroy("alert server destroy");
-    }
-
-    /**
-     * gracefully stop
-     *
-     * @param cause stop cause
-     */
-    public void destroy(String cause) {
-
+        String cause = "AlertServer destroy";
         try {
             // set stop signal is true
             // execute only once
@@ -96,19 +107,19 @@ public class AlertServer {
                 log.warn("AlterServer is already stopped");
                 return;
             }
-            log.info("Alert server is stopping, cause: {}", cause);
+            log.info("AlertServer is stopping, cause: {}", cause);
             try (
-                    AlertRpcServer closedAlertRpcServer = alertRpcServer;
-                    AlertBootstrapService closedAlertBootstrapService = alertBootstrapService;
-                    ListenerEventPostService closedListenerEventPostService = listenerEventPostService;
-                    AlertRegistryClient closedAlertRegistryClient = alertRegistryClient) {
-                // close resource
+                    final AlertRpcServer ignore = alertRpcServer;
+                    final AlertRegistryClient ignore1 = alertRegistryClient;
+                    final AlertHAServer ignore2 = alertHAServer;
+                    final AlertBootstrapService ignore3 = alertBootstrapService;) {
             }
             // thread sleep 3 seconds for thread quietly stop
             ThreadUtils.sleep(Constants.SERVER_CLOSE_WAIT_TIME.toMillis());
-            log.info("Alter server stopped, cause: {}", cause);
+            log.info("AlertServer stopped, cause: {}", cause);
         } catch (Exception e) {
-            log.error("Alert server stop failed, cause: {}", cause, e);
+            log.error("AlertServer stop failed, cause: {}", cause, e);
         }
     }
+
 }

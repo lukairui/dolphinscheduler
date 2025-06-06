@@ -25,24 +25,35 @@ interface DatabaseRes {
   date: string
 }
 
-interface MasterNode {
+type ServerNodeType = 'MASTER' | 'WORKER' | 'ALERT_SERVER'
+
+interface ServerNode {
   id: number
   host: string
   port: number
-  zkDirectory: string
-  resInfo: string
+  serverDirectory: string
+  heartBeatInfo: string
   createTime: string
   lastHeartbeatTime: string
 }
 
-interface WorkerNode {
-  id: number
-  host: string
-  port: number
-  zkDirectories: Array<string>
-  resInfo: string
-  createTime: string
-  lastHeartbeatTime: string
+interface MasterNode extends ServerNode {
+  serverStatus?: 'NORMAL' | 'BUZY'
 }
 
-export { DatabaseRes, MasterNode, WorkerNode }
+interface WorkerNode extends ServerNode {
+  serverStatus?: 'NORMAL' | 'BUZY'
+  workerHostWeight?: number
+  threadPoolUsage?: number
+}
+
+interface AlertNode extends MasterNode {}
+
+export {
+  DatabaseRes,
+  MasterNode,
+  WorkerNode,
+  ServerNodeType,
+  ServerNode,
+  AlertNode
+}
